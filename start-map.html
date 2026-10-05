@@ -408,7 +408,7 @@ const PORTALS_DEF = [
   { name: "이론관", position: new THREE.Vector3(0, 0, -PORTAL_DIST) },
   { name: "대전지도관", position: new THREE.Vector3(PORTAL_DIST, 0, 0) },
   { name: "실험실관", position: new THREE.Vector3(0, 0, PORTAL_DIST) },
-  { name: "캠페인관", position: new THREE.Vector3(-PORTAL_DIST, 0, 0) },
+  { name: "캠페인관", position: new THREE.Vector3(-PORTAL_DIST, 0, 0), href: "campaign-hall.html" },
 ];
 
 function distToPathAxes(x, z) {
@@ -598,6 +598,7 @@ function createPortal(def) {
 
   group.userData = {
     name: def.name,
+    href: def.href || null,
     ring, groundRing, light, sprite,
     baseSpriteScale: sprite.scale.clone(),
     active: 0,
@@ -792,6 +793,18 @@ window.addEventListener("keydown", (e) => {
   if (d < GUESTBOOK_RADIUS) guestbookDialog.showModal();
 });
 
+window.addEventListener("keydown", (e) => {
+  if ((e.code !== "Enter" && e.code !== "Space") || introOpen || guestbookDialog.open) return;
+  for (const p of portals) {
+    if (!p.userData.href) continue;
+    const d = p.position.distanceTo(player.position);
+    if (d < PORTAL_RADIUS) {
+      window.location.href = p.userData.href;
+      break;
+    }
+  }
+});
+
 // --- 포탈 탐험 진행도 ---
 const visited = new Set();
 const progressEl = document.getElementById("progress-line");
@@ -944,6 +957,8 @@ function animate() {
       hintEl.innerHTML = '<kbd>E</kbd> 방명록에 인사 남기기';
     } else if (missionDist < MISSION_RADIUS) {
       hintEl.textContent = "포탈 4곳을 모두 탐험해보세요!";
+    } else if (nearest && nearestDist < PORTAL_RADIUS && nearest.userData.href) {
+      hintEl.innerHTML = `<kbd>Enter</kbd> ${nearest.userData.name} 입장하기`;
     } else if (nearest && nearestDist < PORTAL_RADIUS) {
       hintEl.textContent = `${nearest.userData.name} 포탈에 도착했어요!`;
     } else {
