@@ -1,0 +1,995 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>카피바라 환경동아리 메타버스 · 시작맵</title>
+<style>
+  :root{
+    --ink:#203e36;
+    --muted:#65796d;
+    --green:#24654b;
+    --cream:#faf9ef;
+    --gold:#e8bf63;
+    --gold-deep:#d9942b;
+    --sage:#dbe7ce;
+  }
+
+  *{ box-sizing:border-box; }
+
+  html, body{
+    margin:0;
+    padding:0;
+    width:100%;
+    height:100%;
+    overflow:hidden;
+    background:#dce9cf;
+    color:var(--ink);
+    font-family:"Malgun Gothic","Apple SD Gothic Neo",sans-serif;
+    user-select:none;
+  }
+
+  #app{
+    position:fixed;
+    inset:0;
+  }
+
+  canvas{
+    display:block;
+    outline:none;
+  }
+
+  /* ---------- loading / intro screen ---------- */
+  #loading{
+    position:fixed;
+    inset:0;
+    z-index:100;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:20px;
+    background:radial-gradient(120% 90% at 50% -10%, #eef2df 0%, #dbe7ce 55%, #cbd9b8 100%);
+    transition:opacity .5s ease;
+  }
+  #loading.hide{ opacity:0; pointer-events:none; }
+  #loading-spin{ display:flex; flex-direction:column; align-items:center; gap:16px; }
+  #loading-spin[hidden], #intro-card[hidden]{ display:none !important; }
+  .loading-badge{
+    width:58px; height:58px; border-radius:50%;
+    border:4px solid #ffffffa0; border-top-color:var(--green);
+    animation:spin 1s linear infinite;
+  }
+  @keyframes spin{ to{ transform:rotate(360deg); } }
+  .loading-text{ font-size:18px; font-weight:700; color:var(--ink); }
+  .loading-sub{ font-size:13px; color:var(--muted); }
+
+  #intro-card{
+    max-width:580px; width:100%;
+    background:#faf9eff2; border:1px solid #ffffffb0; border-radius:26px;
+    box-shadow:0 20px 60px #28492b26;
+    padding:36px 40px;
+    text-align:left;
+    max-height:88vh;
+    overflow-y:auto;
+  }
+  #intro-card .eyebrow{ font-size:11px; letter-spacing:3px; font-weight:800; color:#63816e; }
+  #intro-card h1{ font-size:27px; margin:6px 0 2px; color:var(--ink); letter-spacing:-.5px; }
+  #intro-card .intro-sub{ font-size:13px; color:var(--muted); margin:0 0 16px; }
+  #intro-card .intro-desc{ font-size:13.5px; line-height:1.8; color:var(--ink); margin:0 0 16px; }
+  #intro-card .intro-desc b{ color:var(--green); }
+  .hall-list{ display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:0 0 18px; }
+  .hall-chip{
+    background:#eef3e2; border-radius:12px; padding:9px 12px; font-size:12px; color:var(--ink);
+  }
+  .hall-chip b{ display:block; font-size:13px; margin-bottom:2px; }
+  .hall-chip span{ color:var(--muted); font-size:11px; }
+  .intro-controls{
+    display:flex; flex-wrap:wrap; gap:8px 18px; margin:0 0 22px;
+    font-size:12.5px; color:var(--ink);
+  }
+  .primary{
+    background:var(--green); color:white; border:none; border-radius:14px;
+    padding:13px 28px; font-size:14px; font-weight:700; cursor:pointer; font-family:inherit;
+    display:block; margin:0 auto;
+  }
+  .primary:hover{ background:#1d5640; }
+
+  /* ---------- HUD ---------- */
+  .hud{ position:fixed; z-index:20; pointer-events:none; }
+  .card{
+    background:#faf9eff2;
+    border:1px solid #ffffff99;
+    box-shadow:0 6px 25px #28492b1f;
+    border-radius:18px;
+    pointer-events:auto;
+  }
+
+  #title-card{ top:20px; left:20px; max-width:300px; padding:16px 20px; }
+  #title-card .eyebrow{ font-size:10px; letter-spacing:3px; font-weight:800; color:#63816e; }
+  #title-card h1{ font-size:20px; margin:5px 0 3px; letter-spacing:-.5px; color:var(--ink); }
+  #title-card p{ margin:0; font-size:12.5px; line-height:1.6; color:var(--muted); }
+
+  #controls-card{ bottom:20px; left:20px; padding:13px 18px; display:flex; align-items:center; gap:10px; }
+  #controls-card .keys{ font-size:12px; color:var(--ink); }
+  kbd{
+    background:white; border:1px solid #c5d1bf; border-bottom:3px solid #c5d1bf;
+    border-radius:5px; padding:2px 5px; margin:0 2px; font-size:11px;
+  }
+  #resetView{
+    border:1px solid #cfd9c4; border-radius:12px; background:var(--cream); color:var(--ink);
+    padding:8px 12px; font-size:12px; cursor:pointer; font-family:inherit;
+  }
+  #resetView:hover{ background:#eef3e2; }
+
+  #portal-hint{
+    top:20px; right:20px; text-align:right; padding:14px 20px;
+    opacity:0; transform:translateY(-6px);
+    transition:opacity .35s ease, transform .35s ease;
+  }
+  #portal-hint.show{ opacity:1; transform:translateY(0); }
+  #portal-hint h2{ margin:0 0 2px; font-size:16px; font-weight:800; color:var(--green); }
+  #portal-hint p{ margin:0; font-size:11.5px; color:var(--muted); }
+
+  #progress-line{ margin-top:8px !important; font-weight:800; color:var(--green) !important; }
+
+  /* ---------- interaction hint bar ---------- */
+  #hint{
+    position:fixed; bottom:92px; left:50%; transform:translateX(-50%) translateY(6px);
+    background:#234a3eed; color:white; padding:11px 24px; border-radius:40px;
+    font-size:13px; z-index:20; white-space:nowrap;
+    opacity:0; transition:opacity .3s ease, transform .3s ease;
+    pointer-events:none;
+  }
+  #hint.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+  #hint kbd{ background:#ffffff26; border-color:#ffffff40; color:white; }
+
+  /* ---------- toast ---------- */
+  #toast{
+    position:fixed; top:22px; left:50%; transform:translateX(-50%) translateY(-8px);
+    background:#24654bf2; color:white; padding:12px 24px; border-radius:14px;
+    font-size:13px; z-index:40; opacity:0; pointer-events:none;
+    transition:opacity .3s ease, transform .3s ease;
+  }
+  #toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+
+  /* ---------- guestbook dialog ---------- */
+  dialog#guestbook{
+    border:none; border-radius:22px; padding:0; width:480px; max-width:92vw; max-height:84vh;
+    background:var(--cream); color:var(--ink);
+    box-shadow:0 24px 70px #18362955;
+  }
+  dialog#guestbook::backdrop{ background:#17352d55; backdrop-filter:blur(3px); }
+  .gb-head{ padding:22px 24px 14px; display:flex; justify-content:space-between; align-items:flex-start; border-bottom:1px solid #e2e7d7; }
+  .gb-head h2{ margin:4px 0 2px; font-size:20px; }
+  .gb-head .sub{ font-size:12px; color:var(--muted); }
+  .gb-close{ border:none; background:none; font-size:20px; cursor:pointer; color:var(--muted); line-height:1; padding:4px; }
+  .gb-body{ padding:16px 24px 22px; overflow-y:auto; max-height:calc(84vh - 86px); }
+  .gb-entries{ display:flex; flex-direction:column; gap:10px; margin-bottom:16px; max-height:220px; overflow-y:auto; }
+  .gb-entry{ background:white; border-radius:12px; padding:10px 14px; font-size:12.5px; }
+  .gb-entry .name{ font-weight:800; color:var(--green); }
+  .gb-entry .time{ font-size:10.5px; color:var(--muted); float:right; }
+  .gb-entry .msg{ margin-top:4px; line-height:1.5; clear:both; }
+  .gb-empty{ font-size:12.5px; color:var(--muted); text-align:center; padding:18px 0; }
+  .gb-form label{ display:block; font-size:12px; font-weight:700; margin-top:10px; }
+  .gb-form input, .gb-form textarea{
+    width:100%; border:1px solid #cfd9c4; border-radius:10px; padding:9px 11px;
+    font-family:inherit; font-size:13px; margin-top:4px; background:white; color:var(--ink);
+  }
+  .gb-form textarea{ resize:vertical; min-height:60px; }
+  .gb-actions{ display:flex; gap:8px; margin-top:14px; justify-content:flex-end; }
+  .gb-actions button{
+    border-radius:12px; padding:9px 16px; font-size:12.5px; cursor:pointer; font-family:inherit; border:1px solid #cfd9c4; background:white; color:var(--ink);
+  }
+</style>
+</head>
+<body>
+
+  <div id="app"></div>
+
+  <div id="loading">
+    <div id="loading-spin">
+      <div class="loading-badge"></div>
+      <div class="loading-text">불러오는 중...</div>
+      <div class="loading-sub">카피바라 환경동아리 메타버스를 준비하고 있어요</div>
+    </div>
+    <div id="intro-card" class="card" hidden>
+      <div class="eyebrow">CAPYBARA FIELD · 환경동아리</div>
+      <h1>카피바라 환경동아리 메타버스</h1>
+      <p class="intro-sub">대전과학고등학교 환경동아리 · 시작맵</p>
+      <p class="intro-desc">
+        이곳은 카피바라 환경동아리가 만들어가는 작은 메타버스의 출발점이에요.
+        중앙 광장의 가디언 나무에서 길을 따라가면 네 개의 포탈을 만날 수 있어요.
+        각 공간은 차례차례 열릴 예정이라, 지금은 포탈 앞에서 이름표만 미리 확인할 수 있어요.
+        나무에 걸린 <b>방명록</b>에 인사도 남겨보세요 🌿
+      </p>
+      <div class="hall-list">
+        <div class="hall-chip"><b>🧪 이론관</b><span>환경 이론 학습 공간 · 준비중</span></div>
+        <div class="hall-chip"><b>🗺️ 대전지도관</b><span>대전 하천 탐사 기록 · 준비중</span></div>
+        <div class="hall-chip"><b>🔬 실험실관</b><span>동아리 실험 데이터 · 준비중</span></div>
+        <div class="hall-chip"><b>📣 캠페인관</b><span>환경 캠페인 소개 · 준비중</span></div>
+      </div>
+      <div class="intro-controls">
+        <span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> / <kbd>방향키</kbd> 이동</span>
+        <span><kbd>좌클릭 드래그</kbd> 시점 회전</span>
+        <span><kbd>E</kbd> 상호작용 (방명록 등)</span>
+      </div>
+      <button id="enterBtn" class="primary" type="button">입장하기 🌱</button>
+    </div>
+  </div>
+
+  <div class="hud card" id="title-card">
+    <div class="eyebrow">CAPYBARA · 환경동아리</div>
+    <h1>시작맵</h1>
+    <p>카피바라 마스코트를 움직여 네 곳의 포탈을 찾아보세요.<br/>포탈 가까이 가면 안내판이 밝아집니다.</p>
+    <p id="progress-line">포탈 탐험 0 / 4</p>
+  </div>
+
+  <div class="hud card" id="controls-card">
+    <div class="keys">
+      <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> / <kbd>방향키</kbd> 이동
+      <kbd>좌클릭 드래그</kbd> 시점
+      <kbd>E</kbd> 상호작용
+    </div>
+    <button id="resetView" type="button">시점 초기화</button>
+  </div>
+
+  <div class="hud card" id="portal-hint">
+    <h2 id="portal-hint-name">포탈</h2>
+    <p>가까이 다가왔습니다</p>
+  </div>
+
+  <div id="hint"></div>
+  <div id="toast"></div>
+
+  <dialog id="guestbook">
+    <div class="gb-head">
+      <div>
+        <div class="eyebrow">GUESTBOOK</div>
+        <h2>🌿 카피바라 방명록</h2>
+        <div class="sub">가디언 나무에 남기는 짧은 인사</div>
+      </div>
+      <button class="gb-close" id="gbClose" type="button" aria-label="닫기">✕</button>
+    </div>
+    <div class="gb-body">
+      <div class="gb-entries" id="gbEntries"></div>
+      <form class="gb-form" id="gbForm">
+        <label>이름
+          <input id="gbName" type="text" maxlength="16" placeholder="이름 또는 별명" required />
+        </label>
+        <label>메시지
+          <textarea id="gbMessage" maxlength="140" placeholder="환경동아리에게 한마디 남겨보세요" required></textarea>
+        </label>
+        <div class="gb-actions">
+          <button type="button" id="gbCancel">취소</button>
+          <button type="submit" class="primary" style="margin:0;padding:9px 18px;">남기기</button>
+        </div>
+      </form>
+    </div>
+  </dialog>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from "three";
+
+/* =========================================================
+   기본 세팅 (색·조명·카메라는 참고 파일 값을 기준으로 맞춤)
+========================================================= */
+const app = document.getElementById("app");
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color("#dbe7ce");
+scene.fog = new THREE.Fog("#dbe7ce", 46, 150);
+
+const camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.1, 500);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 0.92;
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+app.appendChild(renderer.domElement);
+renderer.domElement.style.touchAction = "none";
+renderer.domElement.style.cursor = "grab";
+
+window.addEventListener("resize", () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+scene.add(new THREE.HemisphereLight(0xfffbe5, 0x91a582, 2.4));
+const sun = new THREE.DirectionalLight(0xffedcc, 2.6);
+sun.position.set(-35, 55, 25);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+Object.assign(sun.shadow.camera, { left: -55, right: 55, top: 55, bottom: -55 });
+sun.shadow.bias = -0.001;
+scene.add(sun);
+
+/* =========================================================
+   저폴리 프리미티브 헬퍼 (참고 파일과 같은 방식: 박스/구 조합)
+========================================================= */
+function mat(c, extra) {
+  return new THREE.MeshStandardMaterial(Object.assign({ color: c, roughness: 1 }, extra));
+}
+const unitSphere = new THREE.SphereGeometry(1, 14, 10);
+function boxMesh(w, h, d, c, x, y, z, parent = scene, extra) {
+  const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat(c, extra));
+  m.position.set(x, y, z);
+  m.castShadow = true;
+  m.receiveShadow = true;
+  parent.add(m);
+  return m;
+}
+function ballMesh(w, h, d, c, x, y, z, parent = scene, extra) {
+  const m = new THREE.Mesh(unitSphere, mat(c, extra));
+  m.scale.set(w, h, d);
+  m.position.set(x, y, z);
+  m.castShadow = true;
+  parent.add(m);
+  return m;
+}
+function cylMesh(rt, rb, h, c, x, y, z, parent = scene, extra) {
+  const m = new THREE.Mesh(new THREE.CylinderGeometry(rt, rb, h, 12), mat(c, extra));
+  m.position.set(x, y, z);
+  m.castShadow = true;
+  m.receiveShadow = true;
+  parent.add(m);
+  return m;
+}
+
+// 참고 파일과 같은 방식의 카드형 라벨 (크림 배경 + 진한 초록 글씨)
+function label(text, x, y, z, size = 9) {
+  const c = document.createElement("canvas");
+  c.width = 560; c.height = 100;
+  const ctx = c.getContext("2d");
+  ctx.fillStyle = "#faf9ef";
+  ctx.beginPath();
+  ctx.roundRect(0, 0, 560, 100, 26);
+  ctx.fill();
+  ctx.fillStyle = "#305747";
+  ctx.font = "bold 44px sans-serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(text, 280, 53);
+  const tex = new THREE.CanvasTexture(c);
+  tex.minFilter = THREE.LinearFilter;
+  const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: false, toneMapped: false, fog: false }));
+  sprite.position.set(x, y, z);
+  sprite.scale.set(size, size * (100 / 560), 1);
+  sprite.renderOrder = 10;
+  scene.add(sprite);
+  return sprite;
+}
+
+/* =========================================================
+   유틸: 시드 랜덤 (씬을 매번 동일하게 배치)
+========================================================= */
+function mulberry32(seed) {
+  return function () {
+    seed |= 0;
+    seed = (seed + 0x6D2B79F5) | 0;
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+const rand = mulberry32(20240521);
+
+/* =========================================================
+   바닥 (낮은 언덕 + 오솔길, 버텍스 컬러) - 참고 파일의 크림/세이지 톤
+========================================================= */
+const GROUND_SIZE = 100;
+const GROUND_SEG = 70;
+const PATH_HALF_WIDTH = 3.0;
+const PLAZA_RADIUS = 8;
+
+const groundGeo = new THREE.PlaneGeometry(GROUND_SIZE, GROUND_SIZE, GROUND_SEG, GROUND_SEG);
+groundGeo.rotateX(-Math.PI / 2);
+
+const grassA = new THREE.Color(0xB7C98F);
+const grassB = new THREE.Color(0xCDDCB6);
+const grassDark = new THREE.Color(0x9FB37A);
+const pathColor = new THREE.Color(0xE7DDB8);
+const pathEdge = new THREE.Color(0xD8CBA0);
+
+// 포탈 위치 (동서남북 십자 배치) - 중앙-포탈 사이는 짧게
+const PORTAL_DIST = 22;
+const PORTALS_DEF = [
+  { name: "이론관", position: new THREE.Vector3(0, 0, -PORTAL_DIST) },
+  { name: "대전지도관", position: new THREE.Vector3(PORTAL_DIST, 0, 0) },
+  { name: "실험실관", position: new THREE.Vector3(0, 0, PORTAL_DIST) },
+  { name: "캠페인관", position: new THREE.Vector3(-PORTAL_DIST, 0, 0) },
+];
+
+function distToPathAxes(x, z) {
+  const dAxisX = Math.abs(z);
+  const dAxisZ = Math.abs(x);
+  return Math.min(dAxisX, dAxisZ);
+}
+
+const posAttr = groundGeo.attributes.position;
+const colors = new Float32Array(posAttr.count * 3);
+const tmpColor = new THREE.Color();
+
+function terrainHeight(x, z) {
+  return Math.sin(x * 0.09 + 1.3) * Math.cos(z * 0.11) * 0.85 + Math.sin(x * 0.17 - z * 0.06) * 0.4;
+}
+
+for (let i = 0; i < posAttr.count; i++) {
+  const x = posAttr.getX(i);
+  const z = posAttr.getZ(i);
+
+  let h = terrainHeight(x, z);
+  const pathDist = distToPathAxes(x, z);
+  const onPath = pathDist < PATH_HALF_WIDTH;
+  const nearCenter = Math.hypot(x, z) < PLAZA_RADIUS + 0.4;
+
+  if (onPath || nearCenter) h *= 0.1;
+  posAttr.setY(i, h);
+
+  if (onPath || nearCenter) {
+    const edgeMix = Math.min(1, Math.max(0, (pathDist - (PATH_HALF_WIDTH - 0.6)) / 0.8));
+    tmpColor.copy(pathColor).lerp(pathEdge, edgeMix);
+  } else {
+    const n = (Math.sin(x * 0.31) * Math.cos(z * 0.27) + 1) / 2;
+    tmpColor.copy(grassA).lerp(grassB, n);
+    if (rand() < 0.05) tmpColor.lerp(grassDark, 0.5);
+  }
+  colors[i * 3] = tmpColor.r;
+  colors[i * 3 + 1] = tmpColor.g;
+  colors[i * 3 + 2] = tmpColor.b;
+}
+groundGeo.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+groundGeo.computeVertexNormals();
+
+const groundMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1 });
+const ground = new THREE.Mesh(groundGeo, groundMat);
+ground.receiveShadow = true;
+scene.add(ground);
+
+function groundHeightAt(x, z) {
+  let h = terrainHeight(x, z);
+  const pathDist = distToPathAxes(x, z);
+  const nearCenter = Math.hypot(x, z) < PLAZA_RADIUS + 0.4;
+  if (pathDist < PATH_HALF_WIDTH || nearCenter) h *= 0.1;
+  return h;
+}
+
+/* =========================================================
+   낮은 폴리곤 나무 / 수풀 / 바위 (참고 파일 팔레트)
+========================================================= */
+const propGroup = new THREE.Group();
+scene.add(propGroup);
+
+function makeTree(size, hueIdx) {
+  const g = new THREE.Group();
+  boxMesh(0.65 * size, 2.6 * size, 0.65 * size, "#998163", 0, 1.3 * size, 0, g);
+  const canopyColors = ["#86a56a", "#91b078", "#a7bd80"];
+  ballMesh(2.2 * size, 3 * size, 2.2 * size, canopyColors[hueIdx % canopyColors.length], 0, 4 * size, 0, g);
+  return g;
+}
+function makeBush(size) {
+  return ballMesh(1.1 * size, 0.9 * size, 1.1 * size, "#93b276", 0, 0.6 * size, 0, propGroup);
+}
+function makeRock(size) {
+  const m = new THREE.Mesh(new THREE.DodecahedronGeometry(0.4 * size, 0), mat("#b9b79f"));
+  m.position.y = 0.2 * size;
+  m.rotation.set(rand() * Math.PI, rand() * Math.PI, rand() * Math.PI);
+  m.castShadow = true;
+  return m;
+}
+
+function isBlocked(x, z, clearance) {
+  if (distToPathAxes(x, z) < clearance) return true;
+  if (Math.hypot(x, z) < 9.5) return true; // 중앙 광장 + 가디언 나무
+  for (const p of PORTALS_DEF) {
+    if (p.position.distanceTo(new THREE.Vector3(x, 0, z)) < 7.5) return true;
+  }
+  return Math.hypot(x, z) > GROUND_SIZE / 2 - 5;
+}
+
+for (let i = 0; i < 170; i++) {
+  const x = (rand() - 0.5) * GROUND_SIZE * 0.92;
+  const z = (rand() - 0.5) * GROUND_SIZE * 0.92;
+  if (isBlocked(x, z, 3.6)) continue;
+
+  const roll = rand();
+  let obj;
+  if (roll < 0.62) obj = makeTree(0.75 + rand() * 0.8, Math.floor(rand() * 3));
+  else if (roll < 0.85) obj = makeBush(0.7 + rand() * 0.7);
+  else obj = makeRock(0.7 + rand() * 1.0);
+
+  obj.position.set(x, groundHeightAt(x, z), z);
+  obj.rotation.y = rand() * Math.PI * 2;
+  propGroup.add(obj);
+}
+
+/* =========================================================
+   캐릭터 (귀여운 카피바라 - 머리를 크게, 눈 반짝임·볼터치 추가)
+========================================================= */
+function buildCapybara(opts = {}) {
+  const body = opts.body || "#b99165";
+  const head = opts.head || "#c3a071";
+  const ear = opts.ear || "#9b744e";
+  const flower = opts.flower || "#e9a143";
+  const leafC = opts.leaf || "#658b46";
+  const legC = opts.legC || "#9e794f";
+  const scale = opts.scale || 1;
+
+  const g = new THREE.Group();
+
+  ballMesh(1.9 * scale, 1.4 * scale, 2.75 * scale, body, 0, 2.05 * scale, -0.1 * scale, g); // 몸통
+  ballMesh(1.9 * scale, 1.65 * scale, 2.1 * scale, head, 0, 2.95 * scale, 2.35 * scale, g); // 머리 (더 크고 둥글게)
+  boxMesh(2.6 * scale, 1.4 * scale, 1.5 * scale, head, 0, 2.6 * scale, 3.2 * scale, g); // 주둥이
+
+  // 귀 (더 둥글고 크게)
+  ballMesh(0.56 * scale, 0.6 * scale, 0.36 * scale, ear, -1.2 * scale, 4.15 * scale, 2.0 * scale, g);
+  ballMesh(0.56 * scale, 0.6 * scale, 0.36 * scale, ear, 1.2 * scale, 4.15 * scale, 2.0 * scale, g);
+
+  // 눈 (크게 + 반짝이는 하이라이트)
+  for (const side of [-1, 1]) {
+    ballMesh(0.24 * scale, 0.27 * scale, 0.2 * scale, "#302c20", side * 1.55 * scale, 3.25 * scale, 2.95 * scale, g);
+    ballMesh(0.08 * scale, 0.09 * scale, 0.07 * scale, "#ffffff", side * 1.6 * scale, 3.32 * scale, 3.06 * scale, g, { roughness: 0.3 });
+    // 볼터치
+    ballMesh(0.3 * scale, 0.18 * scale, 0.05 * scale, "#f2a89d", side * 1.85 * scale, 2.85 * scale, 2.82 * scale, g, { roughness: 0.9, transparent: true, opacity: 0.75 });
+  }
+
+  ballMesh(0.46 * scale, 0.2 * scale, 0.16 * scale, "#72563c", 0, 2.9 * scale, 4.05 * scale, g); // 코
+  ballMesh(0.78 * scale, 0.72 * scale, 0.78 * scale, flower, 0, 4.55 * scale, 2.0 * scale, g); // 꽃 장식
+  ballMesh(0.38 * scale, 0.1 * scale, 0.19 * scale, leafC, 0.22 * scale, 5.25 * scale, 2.0 * scale, g); // 꽃 잎
+
+  const legs = [];
+  for (const x of [-1.15, 1.15]) for (const z of [-1.55, 1.4]) {
+    legs.push(boxMesh(0.8 * scale, 1.25 * scale, 0.85 * scale, legC, x * scale, 0.68 * scale, z * scale, g));
+  }
+
+  return { group: g, legs };
+}
+
+const { group: player, legs } = buildCapybara();
+const SPAWN_Z = PORTAL_DIST * 0.42;
+player.position.set(0, 0, SPAWN_Z);
+scene.add(player);
+
+/* =========================================================
+   포탈 (은은하게 빛나는 링 + 좌대 + 라벨)
+========================================================= */
+function createPortal(def) {
+  const group = new THREE.Group();
+
+  cylMesh(2.0, 2.3, 0.5, "#cabb92", 0, 0.25, 0, group);
+  cylMesh(1.5, 1.7, 0.4, "#d9cba0", 0, 0.7, 0, group);
+
+  const ring = new THREE.Mesh(
+    new THREE.TorusGeometry(1.75, 0.22, 10, 28),
+    mat("#e8bf63", { emissive: "#d9942b", emissiveIntensity: 0.35, roughness: 0.5 })
+  );
+  ring.position.y = 2.3;
+  ring.castShadow = true;
+  group.add(ring);
+
+  const groundRing = new THREE.Mesh(
+    new THREE.RingGeometry(2.6, 3.05, 40),
+    new THREE.MeshBasicMaterial({ color: "#e8bf63", side: THREE.DoubleSide })
+  );
+  groundRing.rotation.x = -Math.PI / 2;
+  groundRing.position.y = 0.03;
+  group.add(groundRing);
+
+  const light = new THREE.PointLight("#f3d78a", 0.8, 11, 2);
+  light.position.set(0, 2.3, 0);
+  group.add(light);
+
+  const sprite = label(def.name, 0, 4.6, 0, 10.5);
+  group.add(sprite);
+
+  group.position.copy(def.position);
+  group.position.y = groundHeightAt(def.position.x, def.position.z);
+
+  group.userData = {
+    name: def.name,
+    ring, groundRing, light, sprite,
+    baseSpriteScale: sprite.scale.clone(),
+    active: 0,
+  };
+  return group;
+}
+
+const portals = PORTALS_DEF.map(createPortal);
+portals.forEach((p) => scene.add(p));
+
+/* =========================================================
+   중앙 광장 - 가디언 나무 + 나무에 걸린 방명록
+========================================================= */
+const guardianTree = new THREE.Group();
+boxMesh(1.1, 5.0, 1.1, "#8a6f4c", 0, 2.5, 0, guardianTree);
+ballMesh(4.6, 4.0, 4.6, "#91b078", 0, 6.4, 0, guardianTree);
+ballMesh(3.4, 3.0, 3.4, "#a7bd80", 0, 8.6, 0, guardianTree);
+ballMesh(2.1, 2.0, 2.1, "#86a56a", 0, 10.6, 0, guardianTree);
+for (let i = 0; i < 10; i++) {
+  const ang = rand() * Math.PI * 2;
+  const r = 1.6 + rand() * 2.6;
+  const y = 5.4 + rand() * 5.4;
+  ballMesh(0.14, 0.14, 0.14, "#e9a143", Math.cos(ang) * r, y, Math.sin(ang) * r, guardianTree, { emissive: "#d9942b", emissiveIntensity: 0.4 });
+}
+
+// 나무에 걸린 방명록 판
+const guestbook = new THREE.Group();
+boxMesh(1.9, 1.3, 0.1, "#3d775b", 0, 2.65, 0.72, guestbook);
+boxMesh(1.65, 1.05, 0.12, "#f9f0cc", 0, 2.65, 0.78, guestbook);
+guardianTree.add(guestbook);
+const guestbookLabel = label("🌿 카피바라 방명록 (E)", 0, 3.9, 0.8, 8.6);
+guardianTree.add(guestbookLabel);
+
+guardianTree.position.set(0, groundHeightAt(0, 0), 0);
+scene.add(guardianTree);
+
+const plaza = new THREE.Mesh(
+  new THREE.CylinderGeometry(PLAZA_RADIUS, PLAZA_RADIUS + 0.4, 0.3, 24),
+  mat("#e1dcc4")
+);
+plaza.position.y = groundHeightAt(0, 0) + 0.14;
+plaza.receiveShadow = true;
+scene.add(plaza);
+
+/* =========================================================
+   광장 컨텐츠 - 친구 카피바라들 + 오늘의 미션 안내판 + 나비
+========================================================= */
+const npcBuddies = [];
+const npcDefs = [
+  { pos: new THREE.Vector3(-4.6, 0, 4.4), scale: 0.72, rotY: 0.6, body: "#a9835b", head: "#b99165", flower: "#cbef7e" },
+  { pos: new THREE.Vector3(4.8, 0, 3.6), scale: 0.6, rotY: -0.9, body: "#d8bd92", head: "#e6d1a8", flower: "#f3d78a" },
+];
+npcDefs.forEach((def) => {
+  const npc = buildCapybara({ scale: def.scale, body: def.body, head: def.head, flower: def.flower });
+  npc.group.position.set(def.pos.x, groundHeightAt(def.pos.x, def.pos.z), def.pos.z);
+  npc.group.rotation.y = def.rotY;
+  npc.bobOffset = rand() * Math.PI * 2;
+  scene.add(npc.group);
+  npcBuddies.push(npc);
+});
+
+// 오늘의 미션 안내판 (스폰 지점 근처 - 라벨은 하나만, 자세한 문구는 가까이 가면 힌트 바에 표시)
+const missionBoard = new THREE.Group();
+boxMesh(0.4, 2.0, 0.4, "#8a6f4c", 0, 1.0, 0, missionBoard);
+boxMesh(2.0, 1.3, 0.15, "#3d775b", 0, 2.1, 0, missionBoard);
+boxMesh(1.75, 1.0, 0.17, "#f9f0cc", 0, 2.1, 0.03, missionBoard);
+const missionLabel = label("🌱 오늘의 미션", 0, 3.0, 0.1, 6.5);
+missionBoard.add(missionLabel);
+const MISSION_POS = new THREE.Vector3(9.5, 0, SPAWN_Z + 2.5);
+const MISSION_RADIUS = 4.5;
+missionBoard.position.set(MISSION_POS.x, groundHeightAt(MISSION_POS.x, MISSION_POS.z), MISSION_POS.z);
+missionBoard.rotation.y = -0.9;
+scene.add(missionBoard);
+
+// 나비 (장식용 파티클)
+function makeButterflyTexture(color) {
+  const c = document.createElement("canvas");
+  c.width = 64; c.height = 48;
+  const ctx = c.getContext("2d");
+  ctx.fillStyle = color;
+  ctx.beginPath(); ctx.ellipse(18, 22, 14, 17, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(46, 22, 14, 17, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = "#3a3226";
+  ctx.fillRect(30, 4, 4, 36);
+  return new THREE.CanvasTexture(c);
+}
+const butterflyColors = ["#f3d78a", "#e9a143", "#cbef7e"];
+const butterflies = [];
+for (let i = 0; i < 6; i++) {
+  const tex = makeButterflyTexture(butterflyColors[i % butterflyColors.length]);
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false }));
+  sp.scale.set(0.9, 0.68, 1);
+  sp.userData = {
+    ang: rand() * Math.PI * 2,
+    r: 3 + rand() * 6,
+    speed: 0.35 + rand() * 0.3,
+    baseY: 2.6 + rand() * 1.8,
+    bob: rand() * Math.PI * 2,
+  };
+  scene.add(sp);
+  butterflies.push(sp);
+}
+
+/* =========================================================
+   입력 처리
+========================================================= */
+const keys = new Set();
+window.addEventListener("keydown", (e) => keys.add(e.code));
+window.addEventListener("keyup", (e) => keys.delete(e.code));
+
+/* =========================================================
+   소개 화면 / 토스트 / 방명록 (상호작용 E)
+========================================================= */
+let introOpen = true;
+
+function esc(s) {
+  return String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
+const toastEl = document.getElementById("toast");
+let toastTimer = null;
+function toast(msg) {
+  toastEl.textContent = msg;
+  toastEl.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toastEl.classList.remove("show"), 2800);
+}
+
+// --- 방명록 ---
+const GB_KEY = "capybara-guestbook-v1";
+function loadEntries() {
+  try { return JSON.parse(localStorage.getItem(GB_KEY) || "[]"); } catch (e) { return []; }
+}
+function saveEntries(list) {
+  try { localStorage.setItem(GB_KEY, JSON.stringify(list.slice(0, 50))); } catch (e) {}
+}
+let gbEntries = loadEntries();
+const gbEntriesEl = document.getElementById("gbEntries");
+function updateGuestbookLabel() {
+  const c = document.createElement("canvas");
+  c.width = 560; c.height = 100;
+  const ctx = c.getContext("2d");
+  ctx.fillStyle = "#faf9ef";
+  ctx.beginPath(); ctx.roundRect(0, 0, 560, 100, 26); ctx.fill();
+  ctx.fillStyle = "#305747";
+  ctx.font = "bold 40px sans-serif";
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.fillText(`🌿 카피바라 방명록 · ${gbEntries.length}`, 280, 53);
+  guestbookLabel.material.map.dispose();
+  guestbookLabel.material.map = new THREE.CanvasTexture(c);
+  guestbookLabel.material.needsUpdate = true;
+}
+function renderGuestbookEntries() {
+  if (!gbEntries.length) {
+    gbEntriesEl.innerHTML = '<div class="gb-empty">아직 남겨진 인사가 없어요. 첫 번째로 남겨보세요 🌱</div>';
+    return;
+  }
+  gbEntriesEl.innerHTML = gbEntries
+    .map((e) => `<div class="gb-entry"><span class="time">${esc(e.time)}</span><span class="name">${esc(e.name)}</span><div class="msg">${esc(e.message)}</div></div>`)
+    .join("");
+}
+renderGuestbookEntries();
+updateGuestbookLabel();
+
+const guestbookDialog = document.getElementById("guestbook");
+const gbForm = document.getElementById("gbForm");
+document.getElementById("gbClose").onclick = () => guestbookDialog.close();
+document.getElementById("gbCancel").onclick = () => guestbookDialog.close();
+guestbookDialog.addEventListener("close", () => keys.clear());
+gbForm.onsubmit = (e) => {
+  e.preventDefault();
+  const name = document.getElementById("gbName").value.trim();
+  const message = document.getElementById("gbMessage").value.trim();
+  if (!name || !message) return;
+  gbEntries.unshift({
+    name,
+    message,
+    time: new Date().toLocaleString("ko-KR", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" }),
+  });
+  saveEntries(gbEntries);
+  renderGuestbookEntries();
+  updateGuestbookLabel();
+  gbForm.reset();
+  guestbookDialog.close();
+  toast("방명록에 인사를 남겼어요! 🌿");
+};
+
+const GUESTBOOK_RADIUS = 5.5;
+window.addEventListener("keydown", (e) => {
+  if (e.code !== "KeyE" || introOpen || guestbookDialog.open) return;
+  const d = Math.hypot(player.position.x - guardianTree.position.x, player.position.z - guardianTree.position.z);
+  if (d < GUESTBOOK_RADIUS) guestbookDialog.showModal();
+});
+
+// --- 포탈 탐험 진행도 ---
+const visited = new Set();
+const progressEl = document.getElementById("progress-line");
+function updateProgress() {
+  progressEl.textContent = `포탈 탐험 ${visited.size} / ${portals.length}`;
+}
+updateProgress();
+
+// --- 하단 상호작용 힌트 바 ---
+const hintEl = document.getElementById("hint");
+
+/* =========================================================
+   카메라 - 좌클릭 드래그로만 회전하는 궤도 카메라
+   (참고 파일과 동일한 방식: yaw/pitch를 드래그로 조절, WASD는 그 시점 기준)
+========================================================= */
+const cameraOrbit = { yaw: 0, pitch: 0.72, distance: 46 };
+const DEFAULT_ORBIT = { yaw: 0, pitch: 0.72 };
+let cameraDrag = null;
+
+renderer.domElement.addEventListener("pointerdown", (e) => {
+  if (e.button !== 0) return;
+  cameraDrag = { id: e.pointerId, x: e.clientX, y: e.clientY };
+  renderer.domElement.setPointerCapture(e.pointerId);
+  renderer.domElement.style.cursor = "grabbing";
+});
+renderer.domElement.addEventListener("pointermove", (e) => {
+  if (!cameraDrag || cameraDrag.id !== e.pointerId) return;
+  cameraOrbit.yaw -= (e.clientX - cameraDrag.x) * 0.006;
+  cameraOrbit.pitch = THREE.MathUtils.clamp(cameraOrbit.pitch + (e.clientY - cameraDrag.y) * 0.004, 0.32, 1.2);
+  cameraDrag.x = e.clientX;
+  cameraDrag.y = e.clientY;
+});
+function endCameraDrag() {
+  cameraDrag = null;
+  renderer.domElement.style.cursor = "grab";
+}
+renderer.domElement.addEventListener("pointerup", endCameraDrag);
+renderer.domElement.addEventListener("pointercancel", endCameraDrag);
+renderer.domElement.addEventListener("lostpointercapture", endCameraDrag);
+window.addEventListener("blur", endCameraDrag);
+
+document.getElementById("resetView").addEventListener("click", () => {
+  cameraOrbit.yaw = DEFAULT_ORBIT.yaw;
+  cameraOrbit.pitch = DEFAULT_ORBIT.pitch;
+});
+
+/* =========================================================
+   메인 루프
+========================================================= */
+const MOVE_SPEED = 19;
+const PORTAL_RADIUS = 6;
+const portalHintEl = document.getElementById("portal-hint");
+const portalHintNameEl = document.getElementById("portal-hint-name");
+
+const clock = new THREE.Clock();
+const followPos = player.position.clone();
+let t = 0;
+
+function animate() {
+  requestAnimationFrame(animate);
+  const dt = Math.min(clock.getDelta(), 0.05);
+  t += dt;
+
+  // --- 이동: 항상 "현재 카메라가 보고 있는 방향" 기준 (참고 파일과 동일한 방식) ---
+  const inputLocked = introOpen || guestbookDialog.open;
+  let dx = 0, dz = 0;
+  if (!inputLocked) {
+    if (keys.has("KeyD") || keys.has("ArrowRight")) dx += 1;
+    if (keys.has("KeyA") || keys.has("ArrowLeft")) dx -= 1;
+    if (keys.has("KeyS") || keys.has("ArrowDown")) dz += 1;
+    if (keys.has("KeyW") || keys.has("ArrowUp")) dz -= 1;
+  }
+  const localX = dx, localZ = dz;
+  dx = localX * Math.cos(cameraOrbit.yaw) + localZ * Math.sin(cameraOrbit.yaw);
+  dz = -localX * Math.sin(cameraOrbit.yaw) + localZ * Math.cos(cameraOrbit.yaw);
+  const moving = Math.hypot(dx, dz) > 0;
+
+  if (moving) {
+    const len = Math.hypot(dx, dz);
+    const half = GROUND_SIZE / 2 - 3;
+    player.position.x = THREE.MathUtils.clamp(player.position.x + (dx / len) * MOVE_SPEED * dt, -half, half);
+    player.position.z = THREE.MathUtils.clamp(player.position.z + (dz / len) * MOVE_SPEED * dt, -half, half);
+
+    const want = Math.atan2(dx, dz);
+    const diff = Math.atan2(Math.sin(want - player.rotation.y), Math.cos(want - player.rotation.y));
+    player.rotation.y += diff * Math.min(1, dt * 12);
+  }
+
+  const gh = groundHeightAt(player.position.x, player.position.z);
+  player.position.y = gh + (moving ? Math.abs(Math.sin(t * 10)) * 0.18 : 0);
+
+  legs.forEach((l, i) => {
+    l.rotation.x = moving ? Math.sin(t * 12 + (i === 0 || i === 3 ? 0 : Math.PI)) * 0.5 : 0;
+  });
+
+  // --- 카메라: 드래그로만 회전, 캐릭터를 부드럽게 따라감 ---
+  followPos.lerp(player.position, Math.min(1, dt * 4));
+  const horizontal = cameraOrbit.distance * Math.cos(cameraOrbit.pitch);
+  camera.position.set(
+    followPos.x + Math.sin(cameraOrbit.yaw) * horizontal,
+    followPos.y + Math.sin(cameraOrbit.pitch) * cameraOrbit.distance + 1.4,
+    followPos.z + Math.cos(cameraOrbit.yaw) * horizontal
+  );
+  camera.lookAt(followPos.x, followPos.y + 2.6, followPos.z);
+
+  // --- 포탈 인터랙션 ---
+  let nearest = null;
+  let nearestDist = Infinity;
+  for (const p of portals) {
+    const d = p.position.distanceTo(player.position);
+    if (d < nearestDist) { nearestDist = d; nearest = p; }
+
+    const isNear = d < PORTAL_RADIUS;
+    if (isNear && !visited.has(p.userData.name)) {
+      visited.add(p.userData.name);
+      updateProgress();
+      if (visited.size === portals.length) {
+        toast("모든 포탈을 탐험했어요! 대단해요 🎉");
+      } else {
+        toast(`${p.userData.name} 탐험 완료! (${visited.size}/${portals.length})`);
+      }
+    }
+    p.userData.active += ((isNear ? 1 : 0) - p.userData.active) * Math.min(1, dt * 6);
+    const a = p.userData.active;
+    const u = p.userData;
+
+    u.ring.rotation.y += dt * (0.2 + a * 0.6);
+    u.ring.material.emissiveIntensity = 0.35 + a * 0.6;
+    u.light.intensity = 0.8 + a * 1.6;
+    u.groundRing.material.color.set(a > 0.5 ? "#a6cc85" : "#e8bf63");
+
+    const s = 1 + a * 0.22;
+    u.sprite.scale.set(u.baseSpriteScale.x * s, u.baseSpriteScale.y * s, 1);
+  }
+
+  if (nearest && nearestDist < PORTAL_RADIUS) {
+    portalHintNameEl.textContent = nearest.userData.name;
+    portalHintEl.classList.add("show");
+  } else {
+    portalHintEl.classList.remove("show");
+  }
+
+  // --- 하단 힌트 바: 상황에 맞는 상호작용 안내 ---
+  if (inputLocked) {
+    hintEl.classList.remove("show");
+  } else {
+    const treeDist = Math.hypot(player.position.x - guardianTree.position.x, player.position.z - guardianTree.position.z);
+    const missionDist = Math.hypot(player.position.x - missionBoard.position.x, player.position.z - missionBoard.position.z);
+    if (treeDist < GUESTBOOK_RADIUS) {
+      hintEl.innerHTML = '<kbd>E</kbd> 방명록에 인사 남기기';
+    } else if (missionDist < MISSION_RADIUS) {
+      hintEl.textContent = "포탈 4곳을 모두 탐험해보세요!";
+    } else if (nearest && nearestDist < PORTAL_RADIUS) {
+      hintEl.textContent = `${nearest.userData.name} 포탈에 도착했어요!`;
+    } else {
+      hintEl.textContent = "오솔길을 따라 포탈을 찾아보세요";
+    }
+    hintEl.classList.add("show");
+  }
+
+  // --- 친구 카피바라들: 제자리에서 느긋하게 흔들거림 ---
+  npcBuddies.forEach((npc) => {
+    npc.group.position.y = groundHeightAt(npc.group.position.x, npc.group.position.z) + Math.abs(Math.sin(t * 2 + npc.bobOffset)) * 0.08;
+    npc.legs.forEach((l, i) => {
+      l.rotation.x = Math.sin(t * 2 + npc.bobOffset + (i === 0 || i === 3 ? 0 : Math.PI)) * 0.08;
+    });
+  });
+
+  // --- 나비: 중앙 나무 주변을 느리게 원을 그리며 비행 ---
+  butterflies.forEach((b) => {
+    const u = b.userData;
+    u.ang += dt * u.speed;
+    b.position.set(Math.cos(u.ang) * u.r, u.baseY + Math.sin(t * 2.2 + u.bob) * 0.35, Math.sin(u.ang) * u.r);
+  });
+
+  renderer.render(scene, camera);
+}
+
+/* =========================================================
+   로딩 → 소개 화면 → 입장
+========================================================= */
+const loadingEl = document.getElementById("loading");
+const spinEl = document.getElementById("loading-spin");
+const introCardEl = document.getElementById("intro-card");
+
+setTimeout(() => {
+  spinEl.hidden = true;
+  introCardEl.hidden = false;
+}, 450);
+
+document.getElementById("enterBtn").addEventListener("click", () => {
+  introOpen = false;
+  keys.clear();
+  loadingEl.classList.add("hide");
+  setTimeout(() => loadingEl.remove(), 600);
+});
+
+animate();
+</script>
+</body>
+</html>
