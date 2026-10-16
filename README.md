@@ -15,6 +15,9 @@
   자료, 내장됨)·생태독성 탭을 확인하고 직접 측정값을 입력/CSV로 불러올 수
   있습니다. `docs/daejeon-water-quality/`에 원본 PDF·공식 CSV·입력용 CSV
   양식·상세 설명이 들어있습니다 (앱 자체는 이 폴더 없이도 완전히 동작합니다).
+- **`lab-hall.html`** — 실험실관. 1인칭으로 자리에 앉아 설명서를 읽고 표본(구/정사면체/
+  정육면체)을 직접 다뤄보는 물벼룩 유영저해 실험 체험. 위험도 산출 방법, 측정 데이터
+  입력, 실험 설명서 등을 메뉴(Tab)에서 열 수 있습니다.
 - **`games/`** — 캠페인관의 미니게임 모듈 5종 + 공용 오버레이 엔진.
   - `game-core.js` — 모든 게임이 공유하는 오버레이(시작 화면/결과 화면/일시정지),
     최고점 저장, 효과음(WebAudio) 등 공용 기능.
@@ -28,7 +31,7 @@
 
 ## 기술 스택
 
-- Three.js (CDN, ES Module import map)
+- Three.js (CDN — ES Module import map in start-map/campaign-hall/daejeon-hall, classic UMD `<script>` in lab-hall)
 - Matter.js (CDN, 수박게임 물리엔진)
 - 순수 HTML/CSS/JavaScript, 외부 빌드 도구 없음
 - 효과음은 전부 WebAudio로 즉석 합성 (외부 음원 파일 없음)
