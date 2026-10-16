@@ -8,6 +8,10 @@
 - **`start-map.html`** — 시작맵. Three.js 저폴리 3D 공간에서 카피바라 캐릭터를 조작해
   걸어다니며, 포탈을 통해 다른 관(이론관/대전지도관/실험실관/캠페인관)으로 이동하는
   구조의 출발점입니다.
+- **`theory-hall.html`** — 이론관. 레트로 탑다운 2D 필드(Canvas, 픽셀아트). 동아리 소개,
+  트로이목마 효과, 물벼룩 실험 안내 표지판과 숨겨진 이스터에그 표지판이 있고,
+  포탈로 시작맵에 돌아갈 수 있습니다. 상단 CONFIG 블록만 고치면 부원마다
+  자기만의 필드로 쉽게 바꿀 수 있는 템플릿 구조입니다.
 - **`campaign-hall.html`** — 캠페인관 로비. 같은 3D 엔진으로 만든 광장에 부스 5개가
   배치되어 있고, 각 부스에 다가가 Enter를 누르면 미니게임이 오버레이로 열립니다.
 - **`daejeon-hall.html`** — 대전지도관. 갑천·유등천·대전천의 채수 후보 지점 5곳을
@@ -32,6 +36,7 @@
 ## 기술 스택
 
 - Three.js (CDN — ES Module import map in start-map/campaign-hall/daejeon-hall, classic UMD `<script>` in lab-hall)
+- theory-hall.html은 Three.js 없이 순수 Canvas 2D로 그리는 별도 엔진입니다.
 - Matter.js (CDN, 수박게임 물리엔진)
 - 순수 HTML/CSS/JavaScript, 외부 빌드 도구 없음
 - 효과음은 전부 WebAudio로 즉석 합성 (외부 음원 파일 없음)

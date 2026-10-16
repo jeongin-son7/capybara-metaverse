@@ -203,7 +203,7 @@
         나무에 걸린 <b>방명록</b>에 인사도 남겨보세요 🌿
       </p>
       <div class="hall-list">
-        <div class="hall-chip"><b>🧪 이론관</b><span>환경 이론 학습 공간 · 준비중</span></div>
+        <div class="hall-chip"><b>🧪 이론관</b><span>환경 이론 학습 공간</span></div>
         <div class="hall-chip"><b>🗺️ 대전지도관</b><span>대전 하천 탐사 기록</span></div>
         <div class="hall-chip"><b>🔬 실험실관</b><span>동아리 실험 데이터</span></div>
         <div class="hall-chip"><b>📣 캠페인관</b><span>환경 캠페인 소개 · 준비중</span></div>
@@ -405,7 +405,7 @@ const pathEdge = new THREE.Color(0xD8CBA0);
 // 포탈 위치 (동서남북 십자 배치) - 중앙-포탈 사이는 짧게
 const PORTAL_DIST = 22;
 const PORTALS_DEF = [
-  { name: "이론관", position: new THREE.Vector3(0, 0, -PORTAL_DIST) },
+  { name: "이론관", position: new THREE.Vector3(0, 0, -PORTAL_DIST), href: "theory-hall.html" },
   { name: "대전지도관", position: new THREE.Vector3(PORTAL_DIST, 0, 0), href: "daejeon-hall.html" },
   { name: "실험실관", position: new THREE.Vector3(0, 0, PORTAL_DIST), href: "lab-hall.html" },
   { name: "캠페인관", position: new THREE.Vector3(-PORTAL_DIST, 0, 0), href: "campaign-hall.html" },

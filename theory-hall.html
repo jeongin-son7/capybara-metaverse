@@ -1,0 +1,935 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>이론관 - 카피바라 환경동아리</title>
+<style>
+/* ============================================================
+   동아리 메타버스 필드 - 스타일시트
+   고전게임(레트로) + 물 테마
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+:root{
+  --water-deep:#1a4fa0;
+  --water-light:#2f7bd6;
+  --sand:#e8cf8a;
+  --sand-dark:#cdb676;
+  --grass:#2f9e44;
+  --grass-dark:#25813a;
+  --path:#a97142;
+  --tree-dark:#1b5e33;
+  --tree-trunk:#5c3a21;
+  --ui-navy:#0b1440;
+  --ui-navy-light:#16205c;
+  --ui-border:#8fd3ff;
+  --ui-gold:#ffd75e;
+  --ui-text:#f4f8ff;
+  --bg:#040713;
+}
+
+*{ box-sizing:border-box; }
+
+html,body{
+  margin:0;
+  padding:0;
+  min-height:100vh;
+  background:
+    radial-gradient(circle at 50% 20%, #10214a 0%, #040713 70%);
+  color:var(--ui-text);
+  font-family:'Press Start 2P', monospace;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  overflow:hidden;
+}
+
+.arcade-frame{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:10px;
+  padding:18px 18px 22px;
+  background:linear-gradient(180deg,#1c2550,#0a0f28);
+  border-radius:22px;
+  border:3px solid #364a9c;
+  box-shadow:
+    0 0 0 6px #060a1c,
+    0 18px 40px rgba(0,0,0,.6),
+    inset 0 2px 0 rgba(255,255,255,.08);
+  max-width:96vw;
+}
+
+.title-bar{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  width:100%;
+  gap:12px;
+  font-size:11px;
+  color:var(--ui-gold);
+  letter-spacing:1px;
+  text-shadow:0 2px 0 #000;
+}
+
+.title-bar .site-name{
+  color:#fff;
+  font-size:13px;
+}
+
+.game-shell{
+  position:relative;
+  border:4px solid #0a0f28;
+  border-radius:6px;
+  box-shadow:0 0 0 3px #4a63c9, 0 0 24px rgba(60,140,255,.35);
+  overflow:hidden;
+  background:#000;
+}
+
+canvas{
+  display:block;
+  image-rendering:pixelated;
+  image-rendering:-moz-crisp-edges;
+  image-rendering:crisp-edges;
+  width:min(800px,92vw);
+  height:auto;
+  aspect-ratio:800/576;
+}
+
+/* 화면 전체를 덮는 CRT 스캔라인 느낌 */
+.scanlines{
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  background:repeating-linear-gradient(
+    to bottom,
+    rgba(0,0,0,0) 0px,
+    rgba(0,0,0,0) 2px,
+    rgba(0,0,0,.12) 3px
+  );
+  mix-blend-mode:multiply;
+}
+
+@keyframes blink{
+  0%,49%{ opacity:1; }
+  50%,100%{ opacity:0; }
+}
+
+/* ---------- 조작법 안내 (좌하단 상시 표시) ---------- */
+.controls-hint{
+  position:absolute;
+  left:8px;
+  bottom:8px;
+  background:rgba(6,10,28,.72);
+  border:2px solid var(--ui-border);
+  border-radius:6px;
+  padding:8px 10px;
+  font-size:8px;
+  line-height:1.9;
+  color:#dff1ff;
+  z-index:10;
+  pointer-events:none;
+}
+.controls-hint b{ color:var(--ui-gold); }
+
+/* ---------- 대화(표지판) 박스 ---------- */
+.dialog-box{
+  position:absolute;
+  left:6%;
+  right:6%;
+  bottom:5%;
+  background:var(--ui-navy);
+  border:3px solid var(--ui-border);
+  border-radius:8px;
+  padding:14px 16px 12px;
+  box-shadow:0 8px 0 rgba(0,0,0,.4), inset 0 0 0 2px #04081c;
+  z-index:15;
+  display:none;
+}
+.dialog-box.show{ display:block; }
+
+.dialog-box .speaker{
+  color:var(--ui-gold);
+  font-size:10px;
+  margin-bottom:8px;
+}
+
+.dialog-box .body{
+  font-size:10px;
+  line-height:1.9;
+  color:var(--ui-text);
+  min-height:2.2em;
+}
+
+.dialog-box .next{
+  position:absolute;
+  right:14px;
+  bottom:10px;
+  font-size:11px;
+  color:var(--ui-gold);
+  animation:blink .8s steps(1) infinite;
+}
+
+/* ---------- 포탈 확인창 ---------- */
+.portal-modal{
+  position:absolute;
+  left:50%;
+  top:50%;
+  transform:translate(-50%,-50%);
+  min-width:260px;
+  background:var(--ui-navy-light);
+  border:3px solid var(--ui-gold);
+  border-radius:10px;
+  padding:20px;
+  text-align:center;
+  z-index:25;
+  display:none;
+  box-shadow:0 10px 0 rgba(0,0,0,.45);
+}
+.portal-modal.show{ display:block; }
+.portal-modal .p-title{
+  font-size:11px;
+  color:var(--ui-gold);
+  margin-bottom:14px;
+  line-height:1.8;
+  white-space:pre-line;
+}
+.portal-modal .p-buttons{
+  display:flex;
+  gap:14px;
+  justify-content:center;
+  font-size:10px;
+}
+.portal-modal .p-buttons span{
+  padding:8px 12px;
+  border:2px solid var(--ui-border);
+  border-radius:6px;
+}
+.portal-modal .p-buttons .yes{ color:#7CFFB2; }
+.portal-modal .p-buttons .no{ color:#ff8f8f; }
+
+footer.credit{
+  font-size:8px;
+  color:#5b6aa0;
+  letter-spacing:.5px;
+}
+</style>
+</head>
+<body>
+
+  <div class="arcade-frame">
+    <div class="title-bar">
+      <span>🌊 CLUB METAVERSE FIELD</span>
+      <span class="site-name" id="siteNameLabel">이론관</span>
+    </div>
+
+    <div class="game-shell">
+      <canvas id="game" width="800" height="576"></canvas>
+      <div class="scanlines"></div>
+
+      <!-- 조작법 상시 안내 -->
+      <div class="controls-hint">
+        <div><b>이동</b> : ↑↓←→ / WASD</div>
+        <div><b>상호작용</b> : E / Space</div>
+        <div><b>대화 닫기</b> : E / Space / Enter</div>
+      </div>
+
+      <!-- 표지판 대화창 -->
+      <div class="dialog-box" id="dialogBox">
+        <div class="speaker" id="dialogSpeaker">표지판</div>
+        <div class="body" id="dialogBody"></div>
+        <div class="next">▼</div>
+      </div>
+
+      <!-- 포탈 이동 확인창 -->
+      <div class="portal-modal" id="portalModal">
+        <div class="p-title" id="portalTitle">다른 사이트로 이동할까요?</div>
+        <div class="p-buttons">
+          <span class="yes">Enter : 이동</span>
+          <span class="no">Esc : 취소</span>
+        </div>
+      </div>
+    </div>
+
+    <footer class="credit">made for club metaverse project · edit the CONFIG block near the top of the script to customize</footer>
+  </div>
+
+<script>
+/* ============================================================
+   CONFIG — 여기만 고치면 나만의 필드가 완성됩니다!
+   (아래 게임 엔진 코드는 보통 건드릴 필요 없어요)
+
+   좌표(col, row)는 "칸 번호" 입니다. 지도는 가로 44칸 x 세로 28칸.
+   좌측 상단이 (0,0), 우측 하단이 (43,27) 이라고 생각하면 됩니다.
+   ============================================================ */
+
+const CONFIG = {
+
+  // ---- 기본 정보 ----
+  siteName: "이론관",                 // 상단 타이틀 / 시작화면에 표시될 이름
+  subtitle: "~ 카피바라 환경동아리 이론관 ~",  // 시작화면 부제목
+
+  // ---- 지형 생성 옵션 ----
+  seed: 1234,          // 숫자를 바꾸면 나무(숲) 배치가 통째로 달라져요. 부원마다 다르게!
+  treeDensity: 0.07,   // 숲 밀도 (0.03 ~ 0.15 사이 추천, 높을수록 나무가 빽빽해짐)
+
+  // ---- 플레이어 시작 위치 ----
+  spawn: { col: 10, row: 21 },
+
+  // ---- 표지판 목록 (원하는 만큼 추가/삭제 가능) ----
+  // title: 대화창 위쪽에 뜨는 말하는 사람/표지판 이름
+  // lines: 표지판을 눌렀을 때 순서대로 보여줄 문장들
+  signs: [
+    {
+      col: 9, row: 19,
+      title: "동아리 소개",
+      lines: [
+        "〇 동아리 개설 목적",
+        "생명과학에 관심이 많은 학생들이 관찰과 실험을 기반으로 생물학적 현상을 탐구하고, 배운 지식을 공유하며 성장할 수 있다.",
+        "〇 주요 동아리 활동 내용(~25년)",
+        "1993년 개설",
+        "타학교(세종과학고등학교, 용인외대부고등학교, 동신과학고등학교 등)와의 생명과학 교류전 다수 진행",
+        "2025년 환경학생동아리 동상 수상"
+      ]
+    },
+    {
+      col: 19, row: 9,
+      title: "트로이목마 효과",
+      lines: [
+        "트로이 목마 효과란 하천 속 미세플라스틱(MP)이 세제 성분인 계면활성제(DT) 같은 화학 오염물질을 표면에 붙인 채 수생 생물의 몸속으로 들어가,",
+        "오염물질의 독성을 함께 전달하거나 더 크게 만드는 현상을 의미한다."
+      ]
+    },
+    {
+      col: 25, row: 22,
+      title: "물벼룩 실험 안내",
+      lines: [
+        "물벼룩의 유영저해 실험은 오염물질에 노출된 물벼룩이 정상적으로 헤엄칠 수 있는지를 확인하여 독성을 평가하는 실험이다.",
+        "ROS평가는 오염물질에 노출된 물벼룩 체내에서 활성산소가 얼마나 증가하는지를 확인하는 방법이다.",
+        "LC50은 실험 생물의 50%가 사망하거나 치명적인 영향을 받는 오염물질의 농도를 의미한다."
+      ]
+    },
+    {
+      col: 37, row: 24,
+      title: "???",
+      hidden: true,   // true 로 두면 흙길이 안 나 있어서 직접 숲을 뒤져야 찾을 수 있어요
+      lines: [
+        "나무 뒤는 확인해 봤어, 크리스?"
+      ]
+    }
+  ],
+
+  // ---- 포탈 목록 (다른 부원 사이트로 이동) ----
+  // url 을 실제 주소로 바꾸면 바로 연결됩니다. "#" 이면 안내 메시지만 뜨고 이동은 안 해요.
+  portals: [
+    { col: 3, row: 13, name: "시작맵", url: "start-map.html", color: "#7CFFB2" }
+  ]
+
+};
+
+/* ============================================================
+   게임 엔진 (탑다운 2D 필드 · 물 테마 · 클래식 스타일)
+   ============================================================ */
+
+(function () {
+  "use strict";
+
+  // ---------------------------------------------------------
+  // 0. 기본 상수
+  // ---------------------------------------------------------
+  const TILE = 32;
+  const MAP_COLS = 44;
+  const MAP_ROWS = 28;
+  const VIEW_COLS = 25;   // 800 / 32
+  const VIEW_ROWS = 18;   // 576 / 32
+  const VIEW_W = VIEW_COLS * TILE;
+  const VIEW_H = VIEW_ROWS * TILE;
+  const MAP_W = MAP_COLS * TILE;
+  const MAP_H = MAP_ROWS * TILE;
+
+  const TILE_GRASS = 0;
+  const TILE_WATER = 1;
+  const TILE_SAND  = 2;
+  const TILE_PATH  = 3;
+  const TILE_TREE  = 4;
+
+  const MOVE_DURATION = 150;      // ms, 한 칸 이동 시간
+  const WALK_FRAME_MS = 140;      // 걷기 애니메이션 프레임 전환 주기
+
+  const COLORS = {
+    grassA: "#2f9e44", grassB: "#278a3b",
+    waterA: "#1a4fa0", waterB: "#2f7bd6", waterFoam: "#bfe9ff",
+    sandA: "#e8cf8a", sandB: "#d9bc74",
+    pathA: "#a97142", pathB: "#8f5c33",
+    treeCanopyDark: "#155c31", treeCanopyMid: "#1f7a41", trunk: "#5c3a21",
+    skin: "#f2c48d", hair: "#3a2a20", shirt: "#3d7ef2", pants: "#22345c", shoe: "#1a1a1a", eye: "#1a1a1a",
+    signPole: "#7a4a24", signBoard: "#c99a5b", signBoardDark: "#8a6636",
+    portalGlow: "#ffffff"
+  };
+
+  // ---------------------------------------------------------
+  // 1. DOM 참조
+  // ---------------------------------------------------------
+  const canvas = document.getElementById("game");
+  const ctx = canvas.getContext("2d");
+  ctx.imageSmoothingEnabled = false;
+
+  const siteNameLabel = document.getElementById("siteNameLabel");
+  const dialogBox = document.getElementById("dialogBox");
+  const dialogSpeaker = document.getElementById("dialogSpeaker");
+  const dialogBody = document.getElementById("dialogBody");
+  const portalModal = document.getElementById("portalModal");
+  const portalTitle = document.getElementById("portalTitle");
+
+  siteNameLabel.textContent = CONFIG.siteName;
+  document.title = CONFIG.siteName + " - 동아리 메타버스";
+
+  // ---------------------------------------------------------
+  // 2. 시드 랜덤
+  // ---------------------------------------------------------
+  function mulberry32(seed) {
+    return function () {
+      seed |= 0; seed = (seed + 0x6D2B79F5) | 0;
+      let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  // ---------------------------------------------------------
+  // 3. 지도 생성
+  // ---------------------------------------------------------
+  const LAKE = { cx: 27, cy: 13, rx: 9, ry: 6.5 };
+  const RIVER_COL = 27;
+  const RIVER_ROW_START = 19;
+  const BRIDGE_ROW = 23;
+
+  let map = [];
+
+  function inBounds(c, r) {
+    return c >= 0 && c < MAP_COLS && r >= 0 && r < MAP_ROWS;
+  }
+
+  function allPOIs() {
+    const list = [{ col: CONFIG.spawn.col, row: CONFIG.spawn.row, clear: 1 }];
+    CONFIG.signs.forEach(s => list.push({ col: s.col, row: s.row, clear: 1 }));
+    CONFIG.portals.forEach(p => list.push({ col: p.col, row: p.row, clear: 1 }));
+    return list;
+  }
+
+  function carvePath(fromCol, fromRow, toCol, toRow) {
+    // 가로로 먼저, 그다음 세로로 — 나무만 밀어서 흙길을 냄(물은 건드리지 않음)
+    let c = fromCol;
+    const step = (col, row) => {
+      if (!inBounds(col, row)) return;
+      if (map[row][col] === TILE_TREE) map[row][col] = TILE_PATH;
+    };
+    const dirC = toCol > fromCol ? 1 : -1;
+    while (c !== toCol) { step(c, fromRow); c += dirC; }
+    step(toCol, fromRow);
+    let r = fromRow;
+    const dirR = toRow > fromRow ? 1 : -1;
+    while (r !== toRow) { step(toCol, r); r += dirR; }
+    step(toCol, toRow);
+  }
+
+  function generateMap() {
+    const rng = mulberry32(CONFIG.seed || 1);
+    map = [];
+    for (let r = 0; r < MAP_ROWS; r++) {
+      const row = [];
+      for (let c = 0; c < MAP_COLS; c++) row.push(TILE_GRASS);
+      map.push(row);
+    }
+
+    // 호수 (타원)
+    for (let r = 0; r < MAP_ROWS; r++) {
+      for (let c = 0; c < MAP_COLS; c++) {
+        const dx = (c - LAKE.cx) / LAKE.rx;
+        const dy = (r - LAKE.cy) / LAKE.ry;
+        const dist = dx * dx + dy * dy;
+        if (dist <= 1) map[r][c] = TILE_WATER;
+        else if (dist <= 1.35) map[r][c] = TILE_SAND;
+      }
+    }
+
+    // 강 (호수 아래에서 남쪽으로 흐름)
+    for (let r = RIVER_ROW_START; r < MAP_ROWS - 1; r++) {
+      for (let c = RIVER_COL - 2; c <= RIVER_COL + 2; c++) {
+        if (!inBounds(c, r)) continue;
+        if (c === RIVER_COL || c === RIVER_COL + 1) map[r][c] = TILE_WATER;
+        else map[r][c] = TILE_SAND;
+      }
+    }
+
+    // 다리 (강을 건너는 길)
+    for (let c = RIVER_COL - 2; c <= RIVER_COL + 3; c++) {
+      if (inBounds(c, BRIDGE_ROW)) map[BRIDGE_ROW][c] = TILE_PATH;
+    }
+
+    // 숲 테두리 (필드 경계)
+    for (let c = 0; c < MAP_COLS; c++) {
+      map[0][c] = TILE_TREE;
+      map[MAP_ROWS - 1][c] = TILE_TREE;
+    }
+    for (let r = 0; r < MAP_ROWS; r++) {
+      map[r][0] = TILE_TREE;
+      map[r][MAP_COLS - 1] = TILE_TREE;
+    }
+
+    const pois = allPOIs();
+    const nearPOI = (c, r) => pois.some(p => Math.abs(p.col - c) <= p.clear + 1 && Math.abs(p.row - r) <= p.clear + 1);
+
+    // 숲 (랜덤 나무)
+    for (let r = 1; r < MAP_ROWS - 1; r++) {
+      for (let c = 1; c < MAP_COLS - 1; c++) {
+        if (map[r][c] !== TILE_GRASS) continue;
+        if (nearPOI(c, r)) continue;
+        if (rng() < CONFIG.treeDensity) map[r][c] = TILE_TREE;
+      }
+    }
+
+    // 스폰 지점에서 각 표지판/포탈까지 흙길 내기 (단, 숨겨진 표지판은 길을 내지 않음)
+    const spawn = CONFIG.spawn;
+    CONFIG.signs.forEach(s => { if (!s.hidden) carvePath(spawn.col, spawn.row, s.col, s.row); });
+    CONFIG.portals.forEach(p => carvePath(spawn.col, spawn.row, p.col, p.row));
+
+    // 최종 안전장치: 모든 오브젝트 자리와 바로 옆 칸은 무조건 걸을 수 있게
+    pois.forEach(p => {
+      const spots = [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]];
+      spots.forEach(([dc, dr]) => {
+        const c = p.col + dc, r = p.row + dr;
+        if (inBounds(c, r) && map[r][c] !== TILE_PATH) map[r][c] = TILE_GRASS;
+      });
+    });
+
+    // 숨겨진 표지판은 나무로 둘러싸서 더 외진 느낌을 줌 (입구 한 칸만 남겨둠)
+    CONFIG.signs.filter(s => s.hidden).forEach(s => {
+      for (let dr = -2; dr <= 2; dr++) {
+        for (let dc = -2; dc <= 2; dc++) {
+          if (Math.max(Math.abs(dc), Math.abs(dr)) !== 2) continue; // 바깥 테두리 칸만
+          if (dc === -2 && dr === 0) continue; // 서쪽에 입구 한 칸을 남김
+          const c = s.col + dc, r = s.row + dr;
+          if (inBounds(c, r) && map[r][c] !== TILE_WATER) map[r][c] = TILE_TREE;
+        }
+      }
+    });
+  }
+
+  function tileAt(c, r) {
+    if (!inBounds(c, r)) return TILE_TREE;
+    return map[r][c];
+  }
+
+  function isSolidTile(c, r) {
+    const t = tileAt(c, r);
+    if (t === TILE_TREE || t === TILE_WATER) return true;
+    if (signAt(c, r)) return true;
+    return false;
+  }
+
+  function signAt(c, r) {
+    return CONFIG.signs.find(s => s.col === c && s.row === r);
+  }
+  function portalAt(c, r) {
+    return CONFIG.portals.find(p => p.col === c && p.row === r);
+  }
+
+  // ---------------------------------------------------------
+  // 4. 플레이어 & 입력
+  // ---------------------------------------------------------
+  const player = {
+    col: CONFIG.spawn.col, row: CONFIG.spawn.row,
+    x: CONFIG.spawn.col * TILE, y: CONFIG.spawn.row * TILE,
+    dir: "down", moving: false,
+    fromX: 0, fromY: 0, toX: 0, toY: 0, moveStart: 0,
+    walkFrame: 0, walkTimer: 0
+  };
+
+  const DIRS = {
+    up:    { dc: 0, dr: -1 },
+    down:  { dc: 0, dr: 1 },
+    left:  { dc: -1, dr: 0 },
+    right: { dc: 1, dr: 0 }
+  };
+
+  const keys = {};
+  const KEY_MAP = {
+    ArrowUp: "up", KeyW: "up",
+    ArrowDown: "down", KeyS: "down",
+    ArrowLeft: "left", KeyA: "left",
+    ArrowRight: "right", KeyD: "right"
+  };
+
+  let dialogState = null;   // { lines, idx, speaker }
+  let portalState = null;   // { portal }
+
+  window.addEventListener("keydown", (e) => {
+    if (KEY_MAP[e.code]) { keys[KEY_MAP[e.code]] = true; }
+
+    if (portalState) {
+      if (e.code === "Enter") { e.preventDefault(); confirmPortal(); }
+      if (e.code === "Escape") { e.preventDefault(); cancelPortal(); }
+      return;
+    }
+
+    if (e.code === "KeyE" || e.code === "Space" || e.code === "Enter") {
+      e.preventDefault();
+      handleInteract();
+    }
+  });
+  window.addEventListener("keyup", (e) => {
+    if (KEY_MAP[e.code]) keys[KEY_MAP[e.code]] = false;
+  });
+
+  // ---------------------------------------------------------
+  // 5. 상호작용 (표지판 / 포탈)
+  // ---------------------------------------------------------
+  function handleInteract() {
+    if (dialogState) { advanceDialog(); return; }
+    const d = DIRS[player.dir];
+    const sign = signAt(player.col + d.dc, player.row + d.dr);
+    if (sign) openDialog(sign);
+  }
+
+  function openDialog(sign) {
+    dialogState = { lines: sign.lines, idx: 0, speaker: sign.title };
+    dialogBox.classList.add("show");
+    dialogSpeaker.textContent = sign.title;
+    dialogBody.textContent = sign.lines[0];
+  }
+
+  function advanceDialog() {
+    dialogState.idx++;
+    if (dialogState.idx >= dialogState.lines.length) {
+      closeDialog();
+      return;
+    }
+    dialogBody.textContent = dialogState.lines[dialogState.idx];
+  }
+
+  function closeDialog() {
+    dialogState = null;
+    dialogBox.classList.remove("show");
+  }
+
+  function openPortal(portal) {
+    portalState = { portal };
+    portalTitle.textContent = "🌊 " + portal.name + " (으)로 이동할까요?";
+    portalModal.classList.add("show");
+  }
+
+  function confirmPortal() {
+    const portal = portalState.portal;
+    if (!portal.url || portal.url === "#") {
+      portalTitle.textContent = "🔧 아직 연결된 주소가 없어요!\nCONFIG 의 url 을 채워주세요.";
+      setTimeout(cancelPortal, 1600);
+      return;
+    }
+    window.location.href = portal.url;
+  }
+
+  function cancelPortal() {
+    // 포탈 칸에서 살짝 뒤로 밀어내서 즉시 재발동 방지
+    const d = DIRS[player.dir];
+    const backCol = player.col - d.dc, backRow = player.row - d.dr;
+    if (!isSolidTile(backCol, backRow)) {
+      player.col = backCol; player.row = backRow;
+      player.x = backCol * TILE; player.y = backRow * TILE;
+    }
+    portalState = null;
+    portalModal.classList.remove("show");
+  }
+
+  // ---------------------------------------------------------
+  // 6. 이동 & 업데이트
+  // ---------------------------------------------------------
+  function update(dt, now) {
+    if (dialogState || portalState) return;
+
+    if (player.moving) {
+      const t = Math.min(1, (now - player.moveStart) / MOVE_DURATION);
+      player.x = player.fromX + (player.toX - player.fromX) * t;
+      player.y = player.fromY + (player.toY - player.fromY) * t;
+
+      player.walkTimer += dt;
+      if (player.walkTimer > WALK_FRAME_MS) { player.walkTimer = 0; player.walkFrame ^= 1; }
+
+      if (t >= 1) {
+        player.moving = false;
+        player.x = player.toX; player.y = player.toY;
+        const portal = portalAt(player.col, player.row);
+        if (portal) openPortal(portal);
+      }
+      return;
+    }
+
+    let dir = null;
+    if (keys.up) dir = "up";
+    else if (keys.down) dir = "down";
+    else if (keys.left) dir = "left";
+    else if (keys.right) dir = "right";
+
+    if (dir) {
+      player.dir = dir;
+      const d = DIRS[dir];
+      const nc = player.col + d.dc, nr = player.row + d.dr;
+      if (!isSolidTile(nc, nr)) {
+        player.fromX = player.x; player.fromY = player.y;
+        player.toX = nc * TILE; player.toY = nr * TILE;
+        player.col = nc; player.row = nr;
+        player.moving = true;
+        player.moveStart = now;
+      }
+    } else {
+      player.walkFrame = 0;
+    }
+  }
+
+  // ---------------------------------------------------------
+  // 7. 렌더링
+  // ---------------------------------------------------------
+  function hash(c, r) { return (c * 928371 + r * 123457) % 100 / 100; }
+
+  function drawTile(c, r, t, now) {
+    const x = c * TILE, y = r * TILE;
+    switch (t) {
+      case TILE_WATER: {
+        ctx.fillStyle = COLORS.waterA;
+        ctx.fillRect(x, y, TILE, TILE);
+        const wave = Math.sin(now / 420 + c * 0.7 + r * 0.4) * 0.5 + 0.5;
+        ctx.fillStyle = COLORS.waterB;
+        ctx.fillRect(x, y + TILE * 0.15, TILE, TILE * (0.35 + wave * 0.2));
+        if (hash(c, r) > 0.7) {
+          ctx.fillStyle = COLORS.waterFoam;
+          const fx = x + 4 + (Math.sin(now / 300 + c) * 0.5 + 0.5) * (TILE - 12);
+          ctx.fillRect(fx, y + TILE * 0.55, 6, 2);
+        }
+        break;
+      }
+      case TILE_SAND: {
+        ctx.fillStyle = COLORS.sandA;
+        ctx.fillRect(x, y, TILE, TILE);
+        ctx.fillStyle = COLORS.sandB;
+        for (let i = 0; i < 3; i++) {
+          const hx = hash(c + i * 13, r + i * 7);
+          ctx.fillRect(x + 4 + hx * (TILE - 10), y + 4 + hash(c + i, r + i * 3) * (TILE - 10), 3, 3);
+        }
+        break;
+      }
+      case TILE_PATH: {
+        ctx.fillStyle = COLORS.pathA;
+        ctx.fillRect(x, y, TILE, TILE);
+        ctx.fillStyle = COLORS.pathB;
+        ctx.fillRect(x, y + TILE * 0.3, TILE, 3);
+        ctx.fillRect(x, y + TILE * 0.7, TILE, 3);
+        break;
+      }
+      case TILE_TREE: {
+        ctx.fillStyle = COLORS.grassA;
+        ctx.fillRect(x, y, TILE, TILE);
+        drawTree(x, y);
+        break;
+      }
+      default: {
+        ctx.fillStyle = hash(c, r) > 0.85 ? COLORS.grassB : COLORS.grassA;
+        ctx.fillRect(x, y, TILE, TILE);
+        if (hash(c, r) > 0.9) {
+          ctx.fillStyle = COLORS.grassB;
+          ctx.fillRect(x + 8, y + 10, 3, 6);
+          ctx.fillRect(x + 18, y + 16, 3, 6);
+        }
+      }
+    }
+  }
+
+  function drawTree(x, y) {
+    ctx.fillStyle = COLORS.trunk;
+    ctx.fillRect(x + TILE / 2 - 3, y + TILE - 12, 6, 12);
+    ctx.fillStyle = COLORS.treeCanopyDark;
+    ctx.fillRect(x + 3, y + 6, TILE - 6, TILE - 16);
+    ctx.fillStyle = COLORS.treeCanopyMid;
+    ctx.fillRect(x + 7, y + 2, TILE - 14, TILE - 18);
+  }
+
+  function drawSign(sign, now) {
+    const x = sign.col * TILE, y = sign.row * TILE;
+    const nearPlayer = isFacingObject(sign.col, sign.row);
+    const bob = nearPlayer ? Math.sin(now / 180) * 2 : 0;
+
+    ctx.fillStyle = COLORS.signPole;
+    ctx.fillRect(x + TILE / 2 - 2, y + TILE / 2, 4, TILE / 2 - 2);
+    ctx.fillStyle = COLORS.signBoard;
+    ctx.fillRect(x + 4, y + 6 + bob, TILE - 8, 16);
+    ctx.strokeStyle = COLORS.signBoardDark;
+    ctx.lineWidth = 2;
+    ctx.strokeRect(x + 4, y + 6 + bob, TILE - 8, 16);
+    ctx.fillStyle = COLORS.signBoardDark;
+    ctx.fillRect(x + 8, y + 11 + bob, TILE - 16, 2);
+    ctx.fillRect(x + 8, y + 16 + bob, TILE - 20, 2);
+
+    if (nearPlayer) drawInteractHint(x + TILE / 2, y - 4);
+  }
+
+  function drawPortal(portal, now) {
+    const x = portal.col * TILE, y = portal.row * TILE;
+    const cx = x + TILE / 2, cy = y + TILE / 2;
+    const pulse = Math.sin(now / 260) * 0.5 + 0.5;
+
+    ctx.save();
+    ctx.globalAlpha = 0.35 + pulse * 0.25;
+    ctx.fillStyle = portal.color;
+    ctx.beginPath();
+    ctx.arc(cx, cy, TILE * 0.55, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    ctx.fillStyle = "#2b2b2b";
+    ctx.fillRect(x + 4, y + 2, 5, TILE - 4);
+    ctx.fillRect(x + TILE - 9, y + 2, 5, TILE - 4);
+    ctx.fillRect(x + 4, y, TILE - 8, 5);
+
+    ctx.save();
+    ctx.globalAlpha = 0.6 + pulse * 0.4;
+    ctx.fillStyle = portal.color;
+    ctx.fillRect(x + 9, y + 7, TILE - 18, TILE - 11);
+    ctx.restore();
+
+    for (let i = 0; i < 3; i++) {
+      const ang = now / 500 + i * (Math.PI * 2 / 3);
+      const px = cx + Math.cos(ang) * (TILE * 0.55);
+      const py = cy + Math.sin(ang) * (TILE * 0.35);
+      ctx.fillStyle = COLORS.portalGlow;
+      ctx.fillRect(px - 1.5, py - 1.5, 3, 3);
+    }
+
+    if (player.col === portal.col && player.row === portal.row) {
+      // 처리는 update()에서
+    } else if (isFacingObject(portal.col, portal.row) || (player.col === portal.col && Math.abs(player.row - portal.row) <= 1)) {
+      drawInteractHint(cx, y - 4, portal.name);
+    }
+  }
+
+  function drawInteractHint(cx, topY, label) {
+    ctx.save();
+    ctx.font = "9px 'Press Start 2P', monospace";
+    const text = label ? label : "E";
+    const w = ctx.measureText(text).width + 10;
+    ctx.fillStyle = "#000000";
+    ctx.strokeStyle = "#ffd75e";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.roundRect ? ctx.roundRect(cx - w / 2, topY - 18, w, 16, 4) : ctx.rect(cx - w / 2, topY - 18, w, 16);
+    ctx.fill(); ctx.stroke();
+    ctx.fillStyle = "#ffd75e";
+    ctx.textAlign = "center";
+    ctx.fillText(text, cx, topY - 6);
+    ctx.restore();
+  }
+
+  function isFacingObject(c, r) {
+    const d = DIRS[player.dir];
+    return player.col + d.dc === c && player.row + d.dr === r;
+  }
+
+  function drawPlayer(now) {
+    const x = player.x, y = player.y;
+    const bounce = player.moving && (player.walkFrame === 1) ? -2 : 0;
+
+    // 그림자
+    ctx.fillStyle = "rgba(0,0,0,0.25)";
+    ctx.beginPath();
+    ctx.ellipse(x + TILE / 2, y + TILE - 4, 9, 4, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    const bodyX = x + TILE / 2, bodyY = y + bounce;
+
+    // 다리
+    ctx.fillStyle = COLORS.pants;
+    const legOffset = player.moving ? (player.walkFrame === 0 ? -3 : 3) : 0;
+    ctx.fillRect(bodyX - 6, bodyY + 20, 5, 8 - Math.abs(legOffset) * 0.3);
+    ctx.fillRect(bodyX + 1, bodyY + 20, 5, 8 - Math.abs(legOffset) * 0.3);
+    ctx.fillStyle = COLORS.shoe;
+    ctx.fillRect(bodyX - 6, bodyY + 26, 5, 3);
+    ctx.fillRect(bodyX + 1, bodyY + 26, 5, 3);
+
+    // 몸통
+    ctx.fillStyle = COLORS.shirt;
+    ctx.fillRect(bodyX - 8, bodyY + 10, 16, 12);
+
+    // 팔
+    ctx.fillStyle = COLORS.shirt;
+    ctx.fillRect(bodyX - 11, bodyY + 11, 3, 8);
+    ctx.fillRect(bodyX + 8, bodyY + 11, 3, 8);
+
+    // 머리
+    ctx.fillStyle = COLORS.skin;
+    ctx.fillRect(bodyX - 7, bodyY - 2, 14, 13);
+    ctx.fillStyle = COLORS.hair;
+    ctx.fillRect(bodyX - 8, bodyY - 6, 16, 6);
+
+    // 얼굴(방향에 따라 눈 위치 이동)
+    ctx.fillStyle = COLORS.eye;
+    if (player.dir === "down") {
+      ctx.fillRect(bodyX - 4, bodyY + 3, 2, 3);
+      ctx.fillRect(bodyX + 2, bodyY + 3, 2, 3);
+    } else if (player.dir === "up") {
+      ctx.fillStyle = COLORS.hair;
+      ctx.fillRect(bodyX - 7, bodyY + 2, 14, 6);
+    } else if (player.dir === "left") {
+      ctx.fillRect(bodyX - 5, bodyY + 3, 2, 3);
+    } else if (player.dir === "right") {
+      ctx.fillRect(bodyX + 3, bodyY + 3, 2, 3);
+    }
+  }
+
+  function render(now) {
+    const camX = Math.min(Math.max(player.x + TILE / 2 - VIEW_W / 2, 0), Math.max(0, MAP_W - VIEW_W));
+    const camY = Math.min(Math.max(player.y + TILE / 2 - VIEW_H / 2, 0), Math.max(0, MAP_H - VIEW_H));
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.save();
+    ctx.translate(-camX, -camY);
+
+    const colStart = Math.max(0, Math.floor(camX / TILE) - 1);
+    const colEnd = Math.min(MAP_COLS - 1, Math.ceil((camX + VIEW_W) / TILE) + 1);
+    const rowStart = Math.max(0, Math.floor(camY / TILE) - 1);
+    const rowEnd = Math.min(MAP_ROWS - 1, Math.ceil((camY + VIEW_H) / TILE) + 1);
+
+    for (let r = rowStart; r <= rowEnd; r++) {
+      for (let c = colStart; c <= colEnd; c++) {
+        drawTile(c, r, map[r][c], now);
+      }
+    }
+
+    // y좌표 기준으로 정렬해서 그려야 자연스럽게 겹침 (표지판/포탈/플레이어)
+    const drawables = [];
+    CONFIG.signs.forEach(s => drawables.push({ y: s.row * TILE, fn: () => drawSign(s, now) }));
+    CONFIG.portals.forEach(p => drawables.push({ y: p.row * TILE, fn: () => drawPortal(p, now) }));
+    drawables.push({ y: player.y + TILE * 0.6, fn: () => drawPlayer(now) });
+    drawables.sort((a, b) => a.y - b.y);
+    drawables.forEach(d => d.fn());
+
+    ctx.restore();
+  }
+
+  // ---------------------------------------------------------
+  // 8. 메인 루프
+  // ---------------------------------------------------------
+  let lastTime = performance.now();
+  function loop(now) {
+    const dt = now - lastTime;
+    lastTime = now;
+    update(dt, now);
+    render(now);
+    requestAnimationFrame(loop);
+  }
+
+  generateMap();
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
